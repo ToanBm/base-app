@@ -15,7 +15,13 @@ function withValidProperties(properties: Record<string, unknown>) {
 }
 
 export async function GET() {
-  const accountAssociation = minikitConfig.accountAssociation.header
+  // Only include accountAssociation if all fields are present
+  const hasAccountAssociation = 
+    minikitConfig.accountAssociation.header &&
+    minikitConfig.accountAssociation.payload &&
+    minikitConfig.accountAssociation.signature;
+
+  const accountAssociation = hasAccountAssociation
     ? {
         header: minikitConfig.accountAssociation.header,
         payload: minikitConfig.accountAssociation.payload,
@@ -45,8 +51,17 @@ export async function GET() {
     noindex: true,
   });
 
-  return Response.json({
-    ...(accountAssociation && { accountAssociation }),
+  // Build response object
+  // Include both 'frame' and 'miniapp' for backward compatibility
+  const response: Record<string, unknown> = {
     miniapp: miniappData,
-  });
+    frame: miniappData, // Some tools expect 'frame' instead of 'miniapp'
+  };
+
+  // Only add accountAssociation if it exists
+  if (accountAssociation) {
+    response.accountAssociation = accountAssociation;
+  }
+
+  return Response.json(response);
 }
