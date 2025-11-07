@@ -5,28 +5,19 @@ const client = createClient();
 
 // Helper function to determine the correct domain for JWT verification
 function getUrlHost(request: NextRequest): string {
-  // Prefer x-forwarded-host as it reflects the deployed domain in proxied environments
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  if (forwardedHost) {
-    return forwardedHost;
-  }
+  const protocol = request.headers.get("x-forwarded-proto") || request.nextUrl?.protocol?.replace(":", "") || "https";
+  const host = request.headers.get("x-forwarded-host")
+    || request.nextUrl?.host
+    || request.headers.get("host");
 
-  // Next.js exposes the actual request URL via nextUrl
-  if (request.nextUrl?.host) {
-    return request.nextUrl.host;
-  }
-
-  // Fallback to Host header
-  const host = request.headers.get("host");
   if (host) {
-    return host;
+    return `${protocol}://${host}`;
   }
 
-  // Final fallback to environment variables (original logic)
   const urlValue = process.env.NEXT_PUBLIC_URL
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
-  return new URL(urlValue).host;
+  return new URL(urlValue).origin;
 }
 
 export async function GET(request: NextRequest) {
